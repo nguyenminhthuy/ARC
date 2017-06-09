@@ -2,8 +2,7 @@ package GUI;
 
 import DAO.*;
 import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.logging.*;
 import javax.swing.*;
 import javax.xml.soap.*;
@@ -16,7 +15,6 @@ public class frmStatusCheck extends javax.swing.JFrame {
     private final String studySubjectWSDL = "/OpenClinica-ws/ws/studySubject/v1/studySubjectWsdl.wsdl";
     private final String eventWSDL = "/OpenClinica-ws/ws/studyEventDefinition/v1/studyEventDefinitionWsdl.wsdl";
     public static List<String> arr_eventOID = new ArrayList<>();   
-    
     
     public frmStatusCheck() throws Exception{
         initComponents();  
@@ -51,15 +49,16 @@ public class frmStatusCheck extends javax.swing.JFrame {
             String us = lbUsername.getText();
             String pwd = lbPassword.getText();
             
-            SOAPMessage soapMessage = soapConnection.call(studyDAO.createSOAPRequest(us, pwd), studyURL);
+            SOAPMessage soapMessage = soapConnection.call(studyDAO.loadAllStudies(us, pwd), studyURL);
             
             NodeList nList = soapMessage.getSOAPBody().getElementsByTagName("study");
             if(nList != null){
-                if(nList.getLength() < 1){
+                int nList_Lenght = nList.getLength();
+                if(nList_Lenght < 1){
                     cbProtocol.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No data to display" }));
                 } 
                 else {
-                    for(int temp = 0; temp < nList.getLength(); temp ++){
+                    for(int temp = 0; temp < nList_Lenght; temp ++){
                         Node nNode = (Node) nList.item(temp);
                         if(nNode.getNodeType() == Node.ELEMENT_NODE){
                             Element eElement = (Element) nNode;                        
@@ -88,16 +87,17 @@ public class frmStatusCheck extends javax.swing.JFrame {
             String pwd = lbPassword.getText();
             
             SOAPMessage soapMessage = soapConnection.call(
-                    studySubjectDAO.createSOAPRequest(us, pwd, studyName), studySubjectURL);
+                    studySubjectDAO.loadStudySubjectbyStudy(us, pwd, studyName), studySubjectURL);
             
             NodeList nList = soapMessage.getSOAPBody().getElementsByTagName("ns2:studySubject");
             
             if(nList != null){
-                if(nList.getLength() < 1){
+                int nList_Lenght = nList.getLength();
+                if(nList_Lenght < 1){
                     cbPatient.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No data to display" }));
                 } 
                 else {
-                    for(int temp = 0; temp < nList.getLength(); temp ++){
+                    for(int temp = 0; temp < nList_Lenght; temp ++){
                         Node nNode = (Node) nList.item(temp);
                         if(nNode.getNodeType() == Node.ELEMENT_NODE){
                             Element eElement = (Element) nNode;                        
@@ -112,79 +112,71 @@ public class frmStatusCheck extends javax.swing.JFrame {
         }
     }
         
-    @SuppressWarnings("empty-statement")
-    private void loadEventbyStudySubject(String studySubject, String studyName) throws Exception{        
+    private void loadEventName(String studyName, String studySubject) throws SOAPException, Exception{
         try {
-            StudySubjectDAO studySubjectDAO = new StudySubjectDAO();
-            
             SOAPConnectionFactory soapConenctionFactory = SOAPConnectionFactory.newInstance();
             SOAPConnection soapConnection = soapConenctionFactory.createConnection();
             
-            String eventOIDURL;
-            eventOIDURL = lbWSDL.getText() + studySubjectWSDL;
+            String studySubjectURL = lbWSDL.getText() + studySubjectWSDL;
             String us = lbUsername.getText();
             String pwd = lbPassword.getText();
+            EventDAO eventDAO = new EventDAO();
             
-            //load event (oid) by study subject
-            SOAPMessage soapMessage = soapConnection.call(
-                    studySubjectDAO.createSOAPRequest(us, pwd, studyName), eventOIDURL);
+            SOAPMessage soapMessage = soapConnection.call(eventDAO.getEventOID(us, pwd, studyName), studySubjectURL);            
             
+            //get event oid
             NodeList nList = soapMessage.getSOAPBody().getElementsByTagName("ns2:studySubject");
-            
-            if(nList != null){   
-                for(int i = 0; i < nList.getLength(); i++){                    
-                    Node nNode = (Node) nList.item(i);                      
-                    if(nNode.getNodeType()==Node.ELEMENT_NODE){  
+            if(nList != null){  
+                int nList_Lenght = nList.getLength();
+                for(int i = 0; i < nList_Lenght; i++){                    
+                    Node nNode = (Node) nList.item(i);                    
+                    if(nNode.getNodeType()==Node.ELEMENT_NODE){                        
                         Element eElement = (Element) nNode;                        
                         String nLabel  = eElement.getElementsByTagName("ns2:label").item(0).getTextContent();                        
-                        if(nLabel.equals(studySubject)){
-                            NodeList nList1 = eElement.getElementsByTagName("ns2:event");                            
-                            if(nList1.getLength() < 1){
-                                cbEvent.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No data to display" }));
-                            } 
-                            else {
-                                for(int j = 0; j < nList1.getLength(); j++){
-                                    Node nNode1 = (Node) nList1.item(j);
+                        if(nLabel.equals(studySubject)){       
+                            
+                            NodeList elementList = eElement.getElementsByTagName("ns2:event");    
+                            int elementList_Lenght = elementList.getLength();
+                                for(int j = 0; j < elementList_Lenght; j++){                                    
+                                    Node nNode1 = (Node) elementList.item(j);
                                     if(nNode1.getNodeType() == Node.ELEMENT_NODE){
                                         Element element1 = (Element) nNode1;
-                                        arr_eventOID.add(element1.getElementsByTagName("ns2:eventDefinitionOID").item(0).getTextContent());
+                                        cbEvent.addItem(element1.getElementsByTagName("ns2:eventDefinitionOID").item(0).getTextContent());
+//                                        arr_eventOID.add(element1.getElementsByTagName("ns2:eventDefinitionOID").item(0).getTextContent());
                                     }
                                 }
-                                break;
-                            }
+                            break;
                         }
                     }
                 }      
-            }
+            }            
             
-            //get event name from study
-            String eventNameURL;
-            eventNameURL = lbWSDL.getText() + eventWSDL;
-            EventDAO eventDAO = new EventDAO();
-            
-            SOAPMessage soapMessage1 = soapConnection.call(eventDAO.createSOAPRequest(us, pwd, studyName), eventNameURL);
-            
-            NodeList nList_event = soapMessage1.getSOAPBody().getElementsByTagName("studyEventDefinition");
-            if(nList_event != null){
-                for(int i = 0; i < nList_event.getLength(); i++){
-                    Node nNode_event = (Node) nList_event.item(i);
-                    if(nNode_event.getNodeType()==Node.ELEMENT_NODE){
-                        Element eElement_event = (Element) nNode_event;
-                        String oid = eElement_event.getElementsByTagName("oid").item(0).getTextContent();                            
-                        for(int k = 0;k < arr_eventOID.size();k++){
-                            if(arr_eventOID.get(k).equals(oid)){
-                                cbEvent.addItem(eElement_event.getElementsByTagName("name").item(0).getTextContent());
-                            }
-                        }  
-                    }
-                }
-            } 
-            soapConnection.close();            
-        } 
-        catch (UnsupportedOperationException | SOAPException e) {         
-            //show something
+//            //get event name
+//            String eventURL = lbWSDL.getText() + eventWSDL;
+//            SOAPMessage soapMessage1 = soapConnection.call(eventDAO.getEventName(us, pwd, studyName), eventURL);
+//            
+//            NodeList nList1 = soapMessage1.getSOAPBody().getElementsByTagName("studyEventDefinition");
+//            if(nList1 != null){
+//                for(int i = 0; i < nList1.getLength(); i++){
+//                    Node nNode1 = (Node) nList1.item(i);
+//                    if(nNode1.getNodeType()==Node.ELEMENT_NODE){
+//                        Element eElement1 = (Element) nNode1;     
+//
+//                          String oid = eElement1.getElementsByTagName("oid").item(0).getTextContent();
+//                            
+//                          for(int k = 0;k < arr_eventOID.size();k++){
+//                              if(arr_eventOID.get(k).equals(oid)){
+//                                  cbEvent.addItem(eElement1.getElementsByTagName("name").item(0).getTextContent());
+//                              }
+//                          }   
+//                    }
+//                }
+//            } 
+            soapConnection.close();
+        } catch (Exception e) {
         }
     }
+    
         
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -390,15 +382,7 @@ public class frmStatusCheck extends javax.swing.JFrame {
 
           
     private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
-        
-        String indexProtocol = Integer.toString(cbProtocol.getSelectedIndex());
-        String indexPatient = Integer.toString(cbPatient.getSelectedIndex());
-        String indexEvent = Integer.toString(cbEvent.getSelectedIndex());
-        String indexStatus = Integer.toString(cbStatus.getSelectedIndex());
-        
-        String nameStudy = cbProtocol.getName();
-        
-        JOptionPane.showMessageDialog(this,nameStudy , "Message", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "This function hasn't finished yet.", "Message", JOptionPane.INFORMATION_MESSAGE);
     }//GEN-LAST:event_btnSearchActionPerformed
 
     private void cbProtocolItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbProtocolItemStateChanged
@@ -409,13 +393,14 @@ public class frmStatusCheck extends javax.swing.JFrame {
             else {
                 try {
                     cbPatient.removeAllItems(); //remove all item before reselect 
+                    cbEvent.removeAllItems();
                     String studyName = cbProtocol.getSelectedItem().toString();
                     loadStudySubjectbyStudy(studyName);
                 } catch (Exception ex) {
                     Logger.getLogger(frmStatusCheck.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
-       }
+        }
     }//GEN-LAST:event_cbProtocolItemStateChanged
 
     private void cbPatientItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbPatientItemStateChanged
@@ -425,14 +410,14 @@ public class frmStatusCheck extends javax.swing.JFrame {
             } 
             else {
                 try {
-                    cbEvent.removeAllItems(); //remove all item before reselect 
+                    cbEvent.removeAllItems();
                     String studyName = cbProtocol.getSelectedItem().toString();
                     String studySubject = cbPatient.getSelectedItem().toString();
-                    loadEventbyStudySubject(studySubject, studyName);
+                    loadEventName(studyName, studySubject);
                 } catch (Exception ex) {
                     Logger.getLogger(frmStatusCheck.class.getName()).log(Level.SEVERE, null, ex);
                 }
-            }          
+            }
        }
     }//GEN-LAST:event_cbPatientItemStateChanged
 

@@ -13,6 +13,10 @@ public class frmLogin extends javax.swing.JFrame {
     
     public frmLogin() {
         initComponents();
+        
+        txtURL.setText("https://advancedresearch-test.eclinicalhosting.com/OpenClinica");
+        txtUsername.setText("Vinh_Nguyen");
+        txtPassword.setText("outsource1020");
     }
 
     @SuppressWarnings("unchecked")
@@ -129,7 +133,7 @@ public class frmLogin extends javax.swing.JFrame {
         
         String pwd = String.valueOf(txtPassword.getPassword());
         
-        if(txtURL.getText().equals("") || txtUsername.getText().equals("") || pwd.equals("") ){
+        if(txtURL.getText().length() == 0 || txtUsername.getText().length() == 0 || pwd.length() == 0 ){
             JOptionPane.showMessageDialog(this, "Please fill in all fields", "Message", JOptionPane.INFORMATION_MESSAGE);                
         }
         else{
@@ -141,7 +145,7 @@ public class frmLogin extends javax.swing.JFrame {
                     SOAPConnection soapConnection = soapConnectionFactory.createConnection();
                     String wsdlURL = url_Part + studyWSDL;
                     SOAPMessage soapMessage;
-                    soapMessage = soapConnection.call(user_DAO.createSOAPRequest(txtUsername.getText(), pwd), wsdlURL);
+                    soapMessage = soapConnection.call(user_DAO.checkLogin(txtUsername.getText(), pwd), wsdlURL);
                     SOAPBody soapBody = soapMessage.getSOAPBody();
                     
                     if(soapBody != null){
@@ -173,7 +177,6 @@ public class frmLogin extends javax.swing.JFrame {
     }//GEN-LAST:event_btnStatusCheckActionPerformed
 
     private void btnLateCheckActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLateCheckActionPerformed
-        
         JOptionPane.showMessageDialog(this, "This function hasn't finished yet.", "Message", JOptionPane.INFORMATION_MESSAGE);
     }//GEN-LAST:event_btnLateCheckActionPerformed
 
