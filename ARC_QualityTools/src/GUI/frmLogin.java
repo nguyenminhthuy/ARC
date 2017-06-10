@@ -13,10 +13,6 @@ public class frmLogin extends javax.swing.JFrame {
     
     public frmLogin() {
         initComponents();
-        
-        txtURL.setText("https://advancedresearch-test.eclinicalhosting.com/OpenClinica");
-        txtUsername.setText("Vinh_Nguyen");
-        txtPassword.setText("outsource1020");
     }
 
     @SuppressWarnings("unchecked")
