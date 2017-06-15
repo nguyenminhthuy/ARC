@@ -8,8 +8,6 @@ import javax.xml.soap.*;
 public class frmLogin extends javax.swing.JFrame {
 
     private final String studyWSDL = "/OpenClinica-ws/ws/study/v1/studyWsdl.wsdl";
-    private final String studySubjectWSDL = "/OpenClinica-ws/ws/studySubject/v1/studySubjectWsdl.wsdl";
-    private final String eventWSDL = "/OpenClinica-ws/ws/studyEventDefinition/v1/studyEventDefinitionWsdl.wsdl";
     
     public frmLogin() {
         initComponents();
@@ -148,12 +146,11 @@ public class frmLogin extends javax.swing.JFrame {
                         if(!soapBody.hasFault()){     
                             this.setVisible(false);
                             
-                            //send value to frmStatusCheck
                             String para_us = txtUsername.getText();
-                            String para_wsdl = url_Part;
+                            String para_url = url_Part;
                             String para_pwd = pwd;   
                             
-                            frmStatusCheck frmStatus = new frmStatusCheck(para_us, para_pwd, para_wsdl);
+                            frmStatusCheck frmStatus = new frmStatusCheck(para_us, para_pwd, para_url);
                             frmStatus.pack();                                                        
                             frmStatus.setLocationRelativeTo(null);
                             ImageIcon img = new ImageIcon(frmStatusCheck.class.getResource("/image/logo.jpg"));
@@ -161,13 +158,14 @@ public class frmLogin extends javax.swing.JFrame {
                             frmStatus.setVisible(true);
                         }      
                         else{
-                            JOptionPane.showMessageDialog(this, "One of your fields is invalid. Please try again.", "Message", JOptionPane.INFORMATION_MESSAGE);
+                            JOptionPane.showMessageDialog(this, "One of your fields is invalid. Please try again.",
+                                    "Message", JOptionPane.INFORMATION_MESSAGE);
                         }           
                     }
-                    soapConnection.close();
+                soapConnection.close();
             } 
             catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "One of your fields is invalid. Please try again.", "Message", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, e.getMessage(), "Message", JOptionPane.INFORMATION_MESSAGE);
             }
         }
     }//GEN-LAST:event_btnStatusCheckActionPerformed

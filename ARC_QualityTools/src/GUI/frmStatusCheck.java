@@ -16,12 +16,15 @@ public class frmStatusCheck extends javax.swing.JFrame {
     private final String eventWSDL = "/OpenClinica-ws/ws/studyEventDefinition/v1/studyEventDefinitionWsdl.wsdl";
     public static List<String> arr_eventOID = new ArrayList<>();   
     
+    public static String username;
+    public static String password;
+    public static String url;    
+    
     public frmStatusCheck() throws Exception{
         initComponents();  
     }
-    
-    //received data from login form
-    public frmStatusCheck(String para_us, String para_pwd, String para_wsdl) throws Exception {
+        
+    public frmStatusCheck(String para_us, String para_pwd, String para_url) throws Exception {
         initComponents();   
         
         cbProtocol.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Select one" }));
@@ -29,11 +32,11 @@ public class frmStatusCheck extends javax.swing.JFrame {
         cbEvent.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Select one" }));
         
         lbUsername.setText(para_us);
-        lbPassword.setText(para_pwd);
-        lbWSDL.setText(para_wsdl);
+        lbMessage.setVisible(false);
         
-        lbPassword.setVisible(false);
-        lbWSDL.setVisible(false);
+        username = para_us;
+        password = para_pwd;
+        url = para_url;
         
         loadAllStudies();
     }
@@ -45,19 +48,14 @@ public class frmStatusCheck extends javax.swing.JFrame {
             SOAPConnection soapConnection = soapConenctionFactory.createConnection();
             
             String studyURL;
-            studyURL = lbWSDL.getText() + studyWSDL;
-            String us = lbUsername.getText();
-            String pwd = lbPassword.getText();
+            studyURL = url + studyWSDL;
             
-            SOAPMessage soapMessage = soapConnection.call(studyDAO.loadAllStudies(us, pwd), studyURL);
+            SOAPMessage soapMessage = soapConnection.call(studyDAO.loadAllStudies(username, password), studyURL);
             
             NodeList nList = soapMessage.getSOAPBody().getElementsByTagName("study");
             if(nList != null){
                 int nList_Lenght = nList.getLength();
-                if(nList_Lenght < 1){
-                    cbProtocol.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No data to display" }));
-                } 
-                else {
+                if(nList_Lenght != 0){
                     for(int temp = 0; temp < nList_Lenght; temp ++){
                         Node nNode = (Node) nList.item(temp);
                         if(nNode.getNodeType() == Node.ELEMENT_NODE){
@@ -67,10 +65,14 @@ public class frmStatusCheck extends javax.swing.JFrame {
                         }
                     } 
                 } 
+                else {
+                    cbProtocol.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No data to display" }));
+                } 
             } 
             soapConnection.close();            
         } 
-        catch (UnsupportedOperationException | SOAPException e) {            
+        catch (UnsupportedOperationException | SOAPException e) {      
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Message", JOptionPane.INFORMATION_MESSAGE);
         }
     }
            
@@ -82,102 +84,124 @@ public class frmStatusCheck extends javax.swing.JFrame {
             SOAPConnection soapConnection = soapConenctionFactory.createConnection();
             
             String studySubjectURL;
-            studySubjectURL = lbWSDL.getText() + studySubjectWSDL;
-            String us = lbUsername.getText();
-            String pwd = lbPassword.getText();
+            studySubjectURL = url + studySubjectWSDL;
             
             SOAPMessage soapMessage = soapConnection.call(
-                    studySubjectDAO.loadStudySubjectbyStudy(us, pwd, studyName), studySubjectURL);
+                    studySubjectDAO.loadStudySubjectbyStudy(username, password, studyName), studySubjectURL);
             
             NodeList nList = soapMessage.getSOAPBody().getElementsByTagName("ns2:studySubject");
             
             if(nList != null){
                 int nList_Lenght = nList.getLength();
-                if(nList_Lenght < 1){
-                    cbPatient.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No data to display" }));
-                } 
-                else {
+                
+                if(nList_Lenght != 0){
                     for(int temp = 0; temp < nList_Lenght; temp ++){
                         Node nNode = (Node) nList.item(temp);
                         if(nNode.getNodeType() == Node.ELEMENT_NODE){
-                            Element eElement = (Element) nNode;                        
-                            cbPatient.addItem(eElement.getElementsByTagName("ns2:label").item(0).getTextContent());
+                            Element eElement = (Element) nNode;       
+                            String label = eElement.getElementsByTagName("ns2:label").item(0).getTextContent();
+                            cbPatient.addItem(label);
                         }
                     } 
+                } 
+                else {
+                    cbPatient.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No data to display" }));
+                    cbEvent.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No data to display" }));
                 }
             }              
             soapConnection.close();            
         } 
-        catch (UnsupportedOperationException | SOAPException e) {            
+        catch (UnsupportedOperationException | SOAPException e) { 
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Message", JOptionPane.INFORMATION_MESSAGE);
         }
     }
-        
-    private void loadEventName(String studyName, String studySubject) throws SOAPException, Exception{
+       
+    private void loadEventOID(String studyName, String studySubject) throws SOAPException, Exception{
         try {
             SOAPConnectionFactory soapConenctionFactory = SOAPConnectionFactory.newInstance();
             SOAPConnection soapConnection = soapConenctionFactory.createConnection();
             
-            String studySubjectURL = lbWSDL.getText() + studySubjectWSDL;
-            String us = lbUsername.getText();
-            String pwd = lbPassword.getText();
+            String studySubjectURL = url + studySubjectWSDL;            
             EventDAO eventDAO = new EventDAO();
             
-            SOAPMessage soapMessage = soapConnection.call(eventDAO.getEventOID(us, pwd, studyName), studySubjectURL);            
+            SOAPMessage soapMessage = soapConnection.call(eventDAO.getEventOID(username, password, studyName), studySubjectURL);            
             
-            //get event oid
+            arr_eventOID.clear();
+            
             NodeList nList = soapMessage.getSOAPBody().getElementsByTagName("ns2:studySubject");
             if(nList != null){  
+                
                 int nList_Lenght = nList.getLength();
                 for(int i = 0; i < nList_Lenght; i++){                    
                     Node nNode = (Node) nList.item(i);                    
-                    if(nNode.getNodeType()==Node.ELEMENT_NODE){                        
+                    if(nNode.getNodeType() == Node.ELEMENT_NODE){                        
                         Element eElement = (Element) nNode;                        
-                        String nLabel  = eElement.getElementsByTagName("ns2:label").item(0).getTextContent();                        
-                        if(nLabel.equals(studySubject)){       
-                            
+                        String nLabel = eElement.getElementsByTagName("ns2:label").item(0).getTextContent(); 
+                        
+                        if(nLabel.equals(studySubject)){     
                             NodeList elementList = eElement.getElementsByTagName("ns2:event");    
                             int elementList_Lenght = elementList.getLength();
                                 for(int j = 0; j < elementList_Lenght; j++){                                    
                                     Node nNode1 = (Node) elementList.item(j);
                                     if(nNode1.getNodeType() == Node.ELEMENT_NODE){
                                         Element element1 = (Element) nNode1;
-                                        cbEvent.addItem(element1.getElementsByTagName("ns2:eventDefinitionOID").item(0).getTextContent());
-//                                        arr_eventOID.add(element1.getElementsByTagName("ns2:eventDefinitionOID").item(0).getTextContent());
+                                        
+                                        String oid = element1.getElementsByTagName("ns2:eventDefinitionOID").item(0).getTextContent();                                        
+                                        arr_eventOID.add(oid);
                                     }
                                 }
                             break;
                         }
                     }
                 }      
-            }            
-            
-//            //get event name
-//            String eventURL = lbWSDL.getText() + eventWSDL;
-//            SOAPMessage soapMessage1 = soapConnection.call(eventDAO.getEventName(us, pwd, studyName), eventURL);
-//            
-//            NodeList nList1 = soapMessage1.getSOAPBody().getElementsByTagName("studyEventDefinition");
-//            if(nList1 != null){
-//                for(int i = 0; i < nList1.getLength(); i++){
-//                    Node nNode1 = (Node) nList1.item(i);
-//                    if(nNode1.getNodeType()==Node.ELEMENT_NODE){
-//                        Element eElement1 = (Element) nNode1;     
-//
-//                          String oid = eElement1.getElementsByTagName("oid").item(0).getTextContent();
-//                            
-//                          for(int k = 0;k < arr_eventOID.size();k++){
-//                              if(arr_eventOID.get(k).equals(oid)){
-//                                  cbEvent.addItem(eElement1.getElementsByTagName("name").item(0).getTextContent());
-//                              }
-//                          }   
-//                    }
-//                }
-//            } 
+            }      
             soapConnection.close();
         } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Message", JOptionPane.INFORMATION_MESSAGE);
         }
     }
     
-        
+    private void loadEventName(String studyName) throws SOAPException, Exception{
+        try {
+            int arr_size = arr_eventOID.size();
+            if(arr_size != 0){
+                SOAPConnectionFactory soapConenctionFactory = SOAPConnectionFactory.newInstance();
+                SOAPConnection soapConnection = soapConenctionFactory.createConnection();
+
+                EventDAO eventDAO = new EventDAO();
+                String eventURL = url + eventWSDL;
+                
+                SOAPMessage soapMessage1 = soapConnection.call(eventDAO.getEventName(username, password, studyName), eventURL);
+
+                NodeList nList1 = soapMessage1.getSOAPBody().getElementsByTagName("studyEventDefinition");
+                if(nList1 != null){
+                    for(int i = 0; i < nList1.getLength(); i++){
+                        Node nNode1 = (Node) nList1.item(i);
+                        if(nNode1.getNodeType() == Node.ELEMENT_NODE){
+                            Element eElement1 = (Element) nNode1;     
+
+                            String oid = eElement1.getElementsByTagName("oid").item(0).getTextContent();    
+                            String name = eElement1.getElementsByTagName("name").item(0).getTextContent();    
+
+                            for(int x = 0; x < arr_size; x++){
+                                if(arr_eventOID.get(x).equals(oid)){                                  
+                                    cbEvent.addItem(name);
+                                    cbEvent.setName(oid);
+                                }
+                            }
+                        }
+                    }
+                } 
+                soapConnection.close();
+            }
+            else{
+                cbEvent.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "No data to display" }));
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Message", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+            
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -190,16 +214,15 @@ public class frmStatusCheck extends javax.swing.JFrame {
         jLabel5 = new javax.swing.JLabel();
         btnSearch = new javax.swing.JButton();
         btnCancel = new javax.swing.JButton();
-        lbWSDL = new javax.swing.JLabel();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        tbResult = new javax.swing.JTable();
         cbProtocol = new javax.swing.JComboBox<>();
         cbStatus = new javax.swing.JComboBox<>();
         lbUsername = new javax.swing.JLabel();
-        lbPassword = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
         cbPatient = new javax.swing.JComboBox<>();
         cbEvent = new javax.swing.JComboBox<>();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jTable1 = new javax.swing.JTable();
+        lbMessage = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Quality Toold - Advanced Research Center INC");
@@ -233,21 +256,6 @@ public class frmStatusCheck extends javax.swing.JFrame {
             }
         });
 
-        lbWSDL.setText("WSDL");
-
-        tbResult.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
-            },
-            new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
-            }
-        ));
-        jScrollPane1.setViewportView(tbResult);
-
         cbProtocol.addItemListener(new java.awt.event.ItemListener() {
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 cbProtocolItemStateChanged(evt);
@@ -258,8 +266,6 @@ public class frmStatusCheck extends javax.swing.JFrame {
 
         lbUsername.setText("Username");
 
-        lbPassword.setText("Password");
-
         jLabel6.setText("Account:");
 
         cbPatient.addItemListener(new java.awt.event.ItemListener() {
@@ -268,50 +274,67 @@ public class frmStatusCheck extends javax.swing.JFrame {
             }
         });
 
+        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane1.setViewportView(jTable1);
+
+        lbMessage.setText("Message");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap(394, Short.MAX_VALUE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel5, javax.swing.GroupLayout.Alignment.TRAILING))
+                .addGap(43, 43, 43)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(btnSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(33, 33, 33)
+                        .addComponent(btnCancel, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(74, 74, 74))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(cbEvent, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(61, 61, 61))
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(cbStatus, javax.swing.GroupLayout.PREFERRED_SIZE, 230, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addContainerGap())))
+            .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(87, 87, 87)
+                        .addGap(54, 54, 54)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(jLabel4)
-                            .addComponent(jLabel1))
+                            .addComponent(jLabel1)
+                            .addComponent(jLabel4))
                         .addGap(18, 18, 18)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(cbPatient, 0, 209, Short.MAX_VALUE)
-                            .addComponent(cbProtocol, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addGap(78, 78, 78)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(jLabel5)
-                            .addComponent(jLabel3))
-                        .addGap(34, 34, 34)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(cbStatus, 0, 230, Short.MAX_VALUE)
-                            .addComponent(cbEvent, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(34, 34, 34)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel6)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(lbUsername, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(lbPassword, javax.swing.GroupLayout.PREFERRED_SIZE, 199, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 733, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(lbWSDL, javax.swing.GroupLayout.PREFERRED_SIZE, 171, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(btnSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(61, 61, 61)
-                                .addComponent(btnCancel, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(71, 71, 71))))
+                            .addComponent(cbProtocol, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 209, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(cbPatient, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 209, javax.swing.GroupLayout.PREFERRED_SIZE)))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(255, 255, 255)
-                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 259, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(35, Short.MAX_VALUE))
+                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 259, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(31, 31, 31)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(jLabel6)
+                                .addGap(18, 18, 18)
+                                .addComponent(lbUsername, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(lbMessage)
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 698, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -336,23 +359,21 @@ public class frmStatusCheck extends javax.swing.JFrame {
                                 .addGap(28, 28, 28)
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                     .addComponent(jLabel5)
-                                    .addComponent(cbEvent, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                        .addGap(55, 55, 55)
-                        .addComponent(lbWSDL)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 283, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel6)
-                            .addComponent(lbUsername)
-                            .addComponent(lbPassword))
-                        .addContainerGap())
+                                    .addComponent(cbEvent, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(113, 113, 113)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(btnCancel, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(btnSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                            .addComponent(btnSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addGap(20, 20, 20)
+                .addComponent(lbMessage)
+                .addGap(18, 18, 18)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 267, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lbUsername)
+                    .addComponent(jLabel6))
+                .addContainerGap(20, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -363,14 +384,13 @@ public class frmStatusCheck extends javax.swing.JFrame {
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnCancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCancelActionPerformed
-        // TODO add your handling code here:
         this.setVisible(false);
         frmLogin frmLogin = new frmLogin();
         frmLogin.pack();
@@ -379,46 +399,41 @@ public class frmStatusCheck extends javax.swing.JFrame {
         frmLogin.setIconImage(img.getImage());
         frmLogin.setVisible(true);
     }//GEN-LAST:event_btnCancelActionPerformed
-
           
     private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
-        JOptionPane.showMessageDialog(this, "This function hasn't finished yet.", "Message", JOptionPane.INFORMATION_MESSAGE);
+        if(cbProtocol.getSelectedIndex() != 0){
+            JOptionPane.showMessageDialog(this, "This function hasn't finished yet.", "Message", JOptionPane.INFORMATION_MESSAGE);
+        } 
+        else{
+            JOptionPane.showMessageDialog(this, "Please choose protocol!", "Message", JOptionPane.INFORMATION_MESSAGE);
+        }
     }//GEN-LAST:event_btnSearchActionPerformed
 
     private void cbProtocolItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbProtocolItemStateChanged
         if (evt.getStateChange() == ItemEvent.SELECTED) {
-            if(this.cbProtocol.getSelectedIndex() < 0){
-                //not thing, check when click Search
-            } 
-            else {
-                try {
-                    cbPatient.removeAllItems(); //remove all item before reselect 
-                    cbEvent.removeAllItems();
-                    String studyName = cbProtocol.getSelectedItem().toString();
-                    loadStudySubjectbyStudy(studyName);
-                } catch (Exception ex) {
-                    Logger.getLogger(frmStatusCheck.class.getName()).log(Level.SEVERE, null, ex);
-                }
+            try {
+                cbPatient.removeAllItems(); //remove all item before reselect 
+                cbEvent.removeAllItems();
+                String studyName = cbProtocol.getSelectedItem().toString();
+                loadStudySubjectbyStudy(studyName);
+            } catch (Exception ex) {
+                Logger.getLogger(frmStatusCheck.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }//GEN-LAST:event_cbProtocolItemStateChanged
 
     private void cbPatientItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbPatientItemStateChanged
         if (evt.getStateChange() == ItemEvent.SELECTED) {
-            if(this.cbPatient.getSelectedIndex() < 0){
-                //not thing, check when click Search
-            } 
-            else {
-                try {
-                    cbEvent.removeAllItems();
-                    String studyName = cbProtocol.getSelectedItem().toString();
-                    String studySubject = cbPatient.getSelectedItem().toString();
-                    loadEventName(studyName, studySubject);
-                } catch (Exception ex) {
-                    Logger.getLogger(frmStatusCheck.class.getName()).log(Level.SEVERE, null, ex);
-                }
+            cbEvent.removeAllItems();                
+            String studyName = cbProtocol.getSelectedItem().toString();
+            String studySubject = cbPatient.getSelectedItem().toString();
+            try {
+                loadEventOID(studyName, studySubject);
+                loadEventName(studyName);
+            } catch (Exception ex) {
+                Logger.getLogger(frmStatusCheck.class.getName()).log(Level.SEVERE, null, ex);
             }
-       }
+        }
     }//GEN-LAST:event_cbPatientItemStateChanged
 
     /**
@@ -480,9 +495,8 @@ public class frmStatusCheck extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JLabel lbPassword;
+    private javax.swing.JTable jTable1;
+    private javax.swing.JLabel lbMessage;
     private javax.swing.JLabel lbUsername;
-    private javax.swing.JLabel lbWSDL;
-    private javax.swing.JTable tbResult;
     // End of variables declaration//GEN-END:variables
 }
