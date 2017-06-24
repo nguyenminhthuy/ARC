@@ -1,5 +1,6 @@
 package GUI;
 
+import BEANS.*;
 import DAO.*;
 import java.net.URL;
 import javax.swing.*;
@@ -8,7 +9,9 @@ import javax.xml.soap.*;
 public class frmLogin extends javax.swing.JFrame {
 
     private final String studyWSDL = "/OpenClinica-ws/ws/study/v1/studyWsdl.wsdl";
-    
+    User us;
+    UserDAO usDAO;
+
     public frmLogin() {
         initComponents();
     }
@@ -122,46 +125,48 @@ public class frmLogin extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
+    
     private void btnStatusCheckActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStatusCheckActionPerformed
         
         String pwd = String.valueOf(txtPassword.getPassword());
+        usDAO = new UserDAO();
+        us = new User();
         
         if(txtURL.getText().length() == 0 || txtUsername.getText().length() == 0 || pwd.length() == 0 ){
             JOptionPane.showMessageDialog(this, "Please fill in all fields", "Message", JOptionPane.INFORMATION_MESSAGE);                
         }
         else{
-            try {
-                    UserDAO user_DAO = new UserDAO();
-                    String url_Part = user_DAO.urlPart(new URL(txtURL.getText()));
+            try {                
+                String url_Part = usDAO.urlPart(new URL(txtURL.getText()));
+                  
+                SOAPConnectionFactory soapConnectionFactory = SOAPConnectionFactory.newInstance();
+                SOAPConnection soapConnection = soapConnectionFactory.createConnection();
+                String wsdlURL = url_Part + studyWSDL;
+                SOAPMessage soapMessage;                
+                
+                us.setUsername(txtUsername.getText());
+                us.setPassword(pwd);  
+                us.setBaseURL(url_Part);
+                
+                soapMessage = soapConnection.call(usDAO.checkLogin(us), wsdlURL);
+                SOAPBody soapBody = soapMessage.getSOAPBody();
                     
-                    SOAPConnectionFactory soapConnectionFactory = SOAPConnectionFactory.newInstance();
-                    SOAPConnection soapConnection = soapConnectionFactory.createConnection();
-                    String wsdlURL = url_Part + studyWSDL;
-                    SOAPMessage soapMessage;
-                    soapMessage = soapConnection.call(user_DAO.checkLogin(txtUsername.getText(), pwd), wsdlURL);
-                    SOAPBody soapBody = soapMessage.getSOAPBody();
-                    
-                    if(soapBody != null){
-                        if(!soapBody.hasFault()){     
-                            this.setVisible(false);
-                            
-                            String para_us = txtUsername.getText();
-                            String para_url = url_Part;
-                            String para_pwd = pwd;   
-                            
-                            frmStatusCheck frmStatus = new frmStatusCheck(para_us, para_pwd, para_url);
-                            frmStatus.pack();                                                        
-                            frmStatus.setLocationRelativeTo(null);
-                            ImageIcon img = new ImageIcon(frmStatusCheck.class.getResource("/image/logo.jpg"));
-                            frmStatus.setIconImage(img.getImage());
-                            frmStatus.setVisible(true);
-                        }      
-                        else{
-                            JOptionPane.showMessageDialog(this, "One of your fields is invalid. Please try again.",
-                                    "Message", JOptionPane.INFORMATION_MESSAGE);
-                        }           
-                    }
+                if(soapBody != null){
+                    if(!soapBody.hasFault()){     
+                        this.setVisible(false);
+                                                      
+                        frmStatusCheck frmStatus = new frmStatusCheck(us);
+                        frmStatus.pack();                                                        
+                        frmStatus.setLocationRelativeTo(null);
+                        ImageIcon img = new ImageIcon(frmStatusCheck.class.getResource("/image/logo.jpg"));
+                        frmStatus.setIconImage(img.getImage());
+                        frmStatus.setVisible(true);
+                    }      
+                    else{
+                        JOptionPane.showMessageDialog(this, "One of your fields is invalid. Please try again.",
+                                "Message", JOptionPane.INFORMATION_MESSAGE);
+                    }           
+                }
                 soapConnection.close();
             } 
             catch (Exception e) {

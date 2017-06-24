@@ -1,10 +1,12 @@
 package GUI;
 
+import BEANS.*;
 import DAO.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.logging.*;
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.xml.soap.*;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -18,25 +20,25 @@ public class frmStatusCheck extends javax.swing.JFrame {
     
     public static String username;
     public static String password;
-    public static String url;    
+    public static String url; 
     
     public frmStatusCheck() throws Exception{
         initComponents();  
     }
         
-    public frmStatusCheck(String para_us, String para_pwd, String para_url) throws Exception {
+    public frmStatusCheck(User us) throws Exception {
         initComponents();   
         
         cbProtocol.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Select one" }));
         cbPatient.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Select one" }));
         cbEvent.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Select one" }));
         
-        lbUsername.setText(para_us);
+        lbUsername.setText(us.getUsername());
         lbMessage.setVisible(false);
         
-        username = para_us;
-        password = para_pwd;
-        url = para_url;
+        username = us.getUsername();
+        password = us.getPassword();
+        url = us.getBaseURL();
         
         loadAllStudies();
     }
@@ -47,8 +49,7 @@ public class frmStatusCheck extends javax.swing.JFrame {
             SOAPConnectionFactory soapConenctionFactory = SOAPConnectionFactory.newInstance();
             SOAPConnection soapConnection = soapConenctionFactory.createConnection();
             
-            String studyURL;
-            studyURL = url + studyWSDL;
+            String studyURL = url + studyWSDL;
             
             SOAPMessage soapMessage = soapConnection.call(studyDAO.loadAllStudies(username, password), studyURL);
             
@@ -83,8 +84,7 @@ public class frmStatusCheck extends javax.swing.JFrame {
             SOAPConnectionFactory soapConenctionFactory = SOAPConnectionFactory.newInstance();
             SOAPConnection soapConnection = soapConenctionFactory.createConnection();
             
-            String studySubjectURL;
-            studySubjectURL = url + studySubjectWSDL;
+            String studySubjectURL = url + studySubjectWSDL;
             
             SOAPMessage soapMessage = soapConnection.call(
                     studySubjectDAO.loadStudySubjectbyStudy(username, password, studyName), studySubjectURL);
@@ -171,11 +171,12 @@ public class frmStatusCheck extends javax.swing.JFrame {
                 EventDAO eventDAO = new EventDAO();
                 String eventURL = url + eventWSDL;
                 
-                SOAPMessage soapMessage1 = soapConnection.call(eventDAO.getEventName(username, password, studyName), eventURL);
+                SOAPMessage soapMessage1 = soapConnection.call(eventDAO.getStudyEvent(username, password, studyName), eventURL);
 
                 NodeList nList1 = soapMessage1.getSOAPBody().getElementsByTagName("studyEventDefinition");
                 if(nList1 != null){
-                    for(int i = 0; i < nList1.getLength(); i++){
+                    int lenght = nList1.getLength();
+                    for(int i = 0; i < lenght; i++){
                         Node nNode1 = (Node) nList1.item(i);
                         if(nNode1.getNodeType() == Node.ELEMENT_NODE){
                             Element eElement1 = (Element) nNode1;     
@@ -185,8 +186,8 @@ public class frmStatusCheck extends javax.swing.JFrame {
 
                             for(int x = 0; x < arr_size; x++){
                                 if(arr_eventOID.get(x).equals(oid)){                                  
-                                    cbEvent.addItem(name);
-                                    cbEvent.setName(oid);
+                                   cbEvent.addItem(name);
+                                   cbEvent.setName(oid);
                                 }
                             }
                         }
@@ -201,7 +202,58 @@ public class frmStatusCheck extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, e.getMessage(), "Message", JOptionPane.INFORMATION_MESSAGE);
         }
     }
+    
+    private myAbstractTableModel matm;  
+    private void searchResult(String studyName, String eventOID){
+        try {
+            String[] header;
+            header = new String[]{"OID", "CRF Name"};
+            ArrayList<Object[]> data = new ArrayList<>(); 
+            ((DefaultTableCellRenderer)tbResult.getTableHeader().getDefaultRenderer())
+                     .setHorizontalAlignment(JLabel.CENTER);
             
+            SOAPConnectionFactory soapConenctionFactory = SOAPConnectionFactory.newInstance();
+            SOAPConnection soapConnection = soapConenctionFactory.createConnection();
+
+            EventDAO eventDAO = new EventDAO();
+            String eventURL = url + eventWSDL;
+               
+            SOAPMessage soapMessage1 = soapConnection.call(eventDAO.getStudyEvent(username, password, studyName), eventURL);
+
+            NodeList nList1 = soapMessage1.getSOAPBody().getElementsByTagName("studyEventDefinition");
+            if(nList1 != null){
+                int lenght = nList1.getLength();
+                for(int i = 0; i < lenght; i++){
+                    Node nNode1 = (Node) nList1.item(i);
+                    if(nNode1.getNodeType() == Node.ELEMENT_NODE){
+                        Element eElement1 = (Element) nNode1;  
+                        String oid = eElement1.getElementsByTagName("oid").item(0).getTextContent();
+                        if(oid.equals(eventOID)){
+                            NodeList nList2 = eElement1.getElementsByTagName("crf");
+                            if(nList2 != null){
+                                for(int y = 0; y < nList2.getLength(); y++){
+                                    Node nNode2 = (Node) nList2.item(y);
+                                    if(nNode2.getNodeType() == Node.ELEMENT_NODE){
+                                        Element eElement2 = (Element) nNode2;                                             
+                                           
+                                        String crfOID = eElement2.getElementsByTagName("oid").item(0).getTextContent();
+                                        String crfName = eElement2.getElementsByTagName("name").item(0).getTextContent();
+                                        
+                                        data.add(new Object[]{ crfOID, crfName });
+                                        matm = new myAbstractTableModel(header, data);
+                                        tbResult.setModel(matm);
+                                    }
+                                }
+                            }
+                        }                            
+                    }
+                }
+            } 
+            soapConnection.close();
+        } catch (Exception e) {
+        }           
+    }
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -221,7 +273,7 @@ public class frmStatusCheck extends javax.swing.JFrame {
         cbPatient = new javax.swing.JComboBox<>();
         cbEvent = new javax.swing.JComboBox<>();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        tbResult = new javax.swing.JTable();
         lbMessage = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -274,18 +326,7 @@ public class frmStatusCheck extends javax.swing.JFrame {
             }
         });
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
-            },
-            new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
-            }
-        ));
-        jScrollPane1.setViewportView(jTable1);
+        jScrollPane1.setViewportView(tbResult);
 
         lbMessage.setText("Message");
 
@@ -302,7 +343,7 @@ public class frmStatusCheck extends javax.swing.JFrame {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(btnSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(33, 33, 33)
+                        .addGap(46, 46, 46)
                         .addComponent(btnCancel, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(74, 74, 74))
                     .addGroup(jPanel1Layout.createSequentialGroup()
@@ -365,9 +406,9 @@ public class frmStatusCheck extends javax.swing.JFrame {
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(btnCancel, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(btnSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addGap(20, 20, 20)
+                .addGap(10, 10, 10)
                 .addComponent(lbMessage)
-                .addGap(18, 18, 18)
+                .addGap(28, 28, 28)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 267, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
@@ -402,10 +443,18 @@ public class frmStatusCheck extends javax.swing.JFrame {
           
     private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
         if(cbProtocol.getSelectedIndex() != 0){
-            JOptionPane.showMessageDialog(this, "This function hasn't finished yet.", "Message", JOptionPane.INFORMATION_MESSAGE);
+            if(cbEvent.getSelectedIndex() != 0){
+                String studyName = cbProtocol.getSelectedItem().toString();
+                String eventOID = cbEvent.getName();
+                searchResult(studyName,eventOID);
+            }
+            else{
+                lbMessage.setVisible(true);
+                lbMessage.setText("No Results Found");
+            }
         } 
         else{
-            JOptionPane.showMessageDialog(this, "Please choose protocol!", "Message", JOptionPane.INFORMATION_MESSAGE);
+            lbMessage.setText("Please choose protocol");
         }
     }//GEN-LAST:event_btnSearchActionPerformed
 
@@ -495,8 +544,8 @@ public class frmStatusCheck extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTable1;
     private javax.swing.JLabel lbMessage;
     private javax.swing.JLabel lbUsername;
+    private javax.swing.JTable tbResult;
     // End of variables declaration//GEN-END:variables
 }

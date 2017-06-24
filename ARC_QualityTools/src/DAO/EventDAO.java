@@ -4,7 +4,7 @@ import javax.xml.soap.*;
 
 public class EventDAO {
     
-    public SOAPMessage getEventName(String us, String pwd, String identify) throws Exception {   
+    public SOAPMessage getStudyEvent(String us, String pwd, String identify) throws Exception {   
     
         MessageFactory messageFactory = MessageFactory.newInstance();
         SOAPMessage soapMessage = messageFactory.createMessage();

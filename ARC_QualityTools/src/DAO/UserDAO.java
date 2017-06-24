@@ -5,6 +5,7 @@
  */
 package DAO;
 
+import BEANS.User;
 import java.net.URL;
 import javax.xml.soap.*;
 
@@ -14,7 +15,7 @@ public class UserDAO {
         return url.getProtocol() + "://" + url.getAuthority();
     }
         
-    public SOAPMessage checkLogin(String us, String pwd) throws Exception {   
+    public SOAPMessage checkLogin(User u) throws Exception {   
     
         MessageFactory messageFactory = MessageFactory.newInstance();
         SOAPMessage soapMessage = messageFactory.createMessage();
@@ -26,7 +27,7 @@ public class UserDAO {
         envelope.addNamespaceDeclaration("v1", studyURL);
         
         SoapHeaderInfo sHeader = new SoapHeaderInfo();
-        sHeader.SOAPHeader_Info(envelope, us, pwd);
+        sHeader.SOAPHeader_Info(envelope, u.getUsername(), u.getPassword());
         
         //soap body
         SOAPBody soapBody = envelope.getBody();
