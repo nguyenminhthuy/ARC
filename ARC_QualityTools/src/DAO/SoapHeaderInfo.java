@@ -23,7 +23,6 @@ public class SoapHeaderInfo {
     
     public void SOAPHeader_Info(SOAPEnvelope envelope, String us, String pwd) 
             throws SOAPException, NoSuchAlgorithmException{
-        //soap header
         SOAPHeader soapheader = envelope.getHeader();
         SOAPElement security = soapheader.addChildElement("Security", prefix, security_uri);        
         SOAPElement usernameToken = security.addChildElement("UsernameToken",prefix);

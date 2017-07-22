@@ -1,21 +1,11 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package DAO;
 
 import BEANS.User;
-import java.net.URL;
 import javax.xml.soap.*;
 
 public class UserDAO {
-    
-    public String urlPart(URL url) {
-        return url.getProtocol() + "://" + url.getAuthority();
-    }
         
-    public SOAPMessage checkLogin(User u) throws Exception {   
+    public SOAPMessage login(User u) throws Exception {   
     
         MessageFactory messageFactory = MessageFactory.newInstance();
         SOAPMessage soapMessage = messageFactory.createMessage();

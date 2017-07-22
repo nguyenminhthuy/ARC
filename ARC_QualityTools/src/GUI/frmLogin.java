@@ -1,22 +1,29 @@
 package GUI;
 
+// <editor-fold desc="Library">
 import BEANS.*;
 import DAO.*;
+import java.io.IOException;
 import java.net.URL;
 import javax.swing.*;
 import javax.xml.soap.*;
+import java.net.*;
+// </editor-fold>
 
 public class frmLogin extends javax.swing.JFrame {
 
+    // <editor-fold desc="Declare varibale.">
     private final String studyWSDL = "/OpenClinica-ws/ws/study/v1/studyWsdl.wsdl";
     User us;
     UserDAO usDAO;
+    // </editor-fold>
 
+    // <editor-fold desc="frmStatusCheck()"> 
     public frmLogin() {
         initComponents();
     }
+    // </editor-fold>  
 
-    @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
@@ -125,69 +132,84 @@ public class frmLogin extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-    
-    private void btnStatusCheckActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStatusCheckActionPerformed
-        
+
+    private boolean checkLogin() throws SOAPException, Exception {
+        boolean flag = false;
         String pwd = String.valueOf(txtPassword.getPassword());
         usDAO = new UserDAO();
         us = new User();
-        
-        if(txtURL.getText().length() == 0 || txtUsername.getText().length() == 0 || pwd.length() == 0 ){
-            JOptionPane.showMessageDialog(this, "Please fill in all fields", "Message", JOptionPane.INFORMATION_MESSAGE);                
-        }
-        else{
-            try {                
-                String url_Part = usDAO.urlPart(new URL(txtURL.getText()));
-                  
-                SOAPConnectionFactory soapConnectionFactory = SOAPConnectionFactory.newInstance();
-                SOAPConnection soapConnection = soapConnectionFactory.createConnection();
-                String wsdlURL = url_Part + studyWSDL;
-                SOAPMessage soapMessage;                
-                
-                us.setUsername(txtUsername.getText());
-                us.setPassword(pwd);  
-                us.setBaseURL(url_Part);
-                
-                soapMessage = soapConnection.call(usDAO.checkLogin(us), wsdlURL);
-                SOAPBody soapBody = soapMessage.getSOAPBody();
-                    
-                if(soapBody != null){
-                    if(!soapBody.hasFault()){     
-                        this.setVisible(false);
-                                                      
-                        frmStatusCheck frmStatus = new frmStatusCheck(us);
-                        frmStatus.pack();                                                        
-                        frmStatus.setLocationRelativeTo(null);
-                        ImageIcon img = new ImageIcon(frmStatusCheck.class.getResource("/image/logo.jpg"));
-                        frmStatus.setIconImage(img.getImage());
-                        frmStatus.setVisible(true);
-                    }      
-                    else{
-                        JOptionPane.showMessageDialog(this, "One of your fields is invalid. Please try again.",
-                                "Message", JOptionPane.INFORMATION_MESSAGE);
-                    }           
-                }
-                soapConnection.close();
-            } 
-            catch (Exception e) {
-                JOptionPane.showMessageDialog(this, e.getMessage(), "Message", JOptionPane.INFORMATION_MESSAGE);
+
+        ConnectionDAO con = new ConnectionDAO();
+        String url_Part = con.urlPart(new URL(txtURL.getText()));
+        SOAPConnectionFactory soapConnectionFactory = SOAPConnectionFactory.newInstance();
+        SOAPConnection soapConnection = soapConnectionFactory.createConnection();
+        String wsdlURL = url_Part + studyWSDL;
+        SOAPMessage soapMessage;
+
+        try {
+            us.setUsername(txtUsername.getText());
+            us.setPassword(pwd);
+            us.setBaseURL(url_Part);
+
+            soapMessage = soapConnection.call(usDAO.login(us), wsdlURL);
+            SOAPBody soapBody = soapMessage.getSOAPBody();
+
+            if (soapBody != null) {
+                flag = !soapBody.hasFault();
             }
+            soapConnection.close();
+        } catch (MalformedURLException ex) {
+        }
+        return flag;
+    }
+
+    private boolean isEmptyInput() {
+        String pwd = String.valueOf(txtPassword.getPassword());
+        return txtURL.getText().length() == 0 || txtUsername.getText().length() == 0 || pwd.length() == 0;
+    }
+
+    // <editor-fold desc="Status Check Action">  
+    private void btnStatusCheckActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStatusCheckActionPerformed
+        try {
+            us = new User();
+            if (isEmptyInput()) {
+                JOptionPane.showMessageDialog(this, "Please fill in all fields", "Message", JOptionPane.ERROR_MESSAGE);
+            } else {//cannot validate url, if url is invalid, it shows in "catch"
+                if (checkLogin()) {
+                    this.setVisible(false);
+                    frmStatusCheck frmStatus = new frmStatusCheck(us);
+                    frmStatus.pack();
+                    frmStatus.setLocationRelativeTo(null);
+                    ImageIcon img = new ImageIcon(frmStatusCheck.class.getResource("/image/logo.jpg"));
+                    frmStatus.setIconImage(img.getImage());
+                    frmStatus.setVisible(true);
+                } else {
+                    JOptionPane.showMessageDialog(this, "One of your fields is invalid. Please check again.",
+                            "Message", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Login failed. Please check your URL",
+                    "Message", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Login failed. Please check your URL",
+                    "Message", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_btnStatusCheckActionPerformed
+    // </editor-fold>
 
+    // <editor-fold desc="Late Check Action">   
     private void btnLateCheckActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLateCheckActionPerformed
-        JOptionPane.showMessageDialog(this, "This function hasn't finished yet.", "Message", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "This function hasn't  finished yet!",
+                "Message", JOptionPane.INFORMATION_MESSAGE);
     }//GEN-LAST:event_btnLateCheckActionPerformed
+    // </editor-fold>
 
+    // <editor-fold desc="Main">
     /**
      * @param args the command line arguments
      */
     public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -195,19 +217,10 @@ public class frmLogin extends javax.swing.JFrame {
                     break;
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(frmLogin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(frmLogin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(frmLogin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(frmLogin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-        //</editor-fold>
-        //</editor-fold>
 
-        /* Create and display the form */
         java.awt.EventQueue.invokeLater(() -> {
             frmLogin frmLogin = new frmLogin();
             frmLogin.pack();
@@ -217,6 +230,7 @@ public class frmLogin extends javax.swing.JFrame {
             frmLogin.setVisible(true);
         });
     }
+    // </editor-fold>
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnLateCheck;
